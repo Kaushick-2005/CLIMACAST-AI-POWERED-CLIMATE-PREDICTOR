@@ -188,3 +188,9 @@ Thumbs.db
 *.h5 binary
 *.pt binary
 *.onnx binary
+*.mp4 binary
+*.avi binary
+*.mov binary
+*.wmv binary
+*.flv binary
+*.mkv binary
