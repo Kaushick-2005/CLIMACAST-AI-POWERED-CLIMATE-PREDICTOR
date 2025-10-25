@@ -152,3 +152,39 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+# =============================
+# ⚙️ CLIMACAST PROJECT - GITATTRIBUTES
+# =============================
+
+# Auto detect text files and handle line endings
+* text=auto
+
+# Enforce LF line endings for source files (consistent across OS)
+*.py text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.jsx text eol=lf
+*.tsx text eol=lf
+
+# Binary files (no end-of-line normalization)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.pkl binary
+*.h5 binary
+*.pt binary
+*.onnx binary
