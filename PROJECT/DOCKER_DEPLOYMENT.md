@@ -84,7 +84,37 @@ NASA_API_KEY=your_key_here
 # Logging
 LOG_LEVEL=INFO
 LOG_FILE=/app/logs/climacast.log
+
+# Climate APIs (recommended for full live data)
+NOAA_API_TOKEN=your_noaa_token_here
+OPENWEATHER_API_KEY=your_openweather_key_here
+
+# Optional: external Ollama endpoint (if not local)
+OLLAMA_URL=http://localhost:11434
 ```
+
+## Recommended Reliable Hosting Path (for interview demo)
+
+### Use Render with Docker (recommended)
+
+1. Push latest code to GitHub.
+2. In Render, create **New Web Service** from repo.
+3. Render will auto-detect `Dockerfile`.
+4. Add environment variables in Render dashboard:
+   - `NOAA_API_TOKEN`
+   - `OPENWEATHER_API_KEY`
+   - `PORT` (Render sets this automatically; Dockerfile supports it)
+   - Optional: `OLLAMA_URL` if you host an LLM endpoint.
+5. Deploy and open the public URL.
+
+### Post-deploy verification checklist
+
+- App loads home page without crash.
+- Forecast tab generates output.
+- Analysis tab loads historical metrics.
+- AI Advisor returns insights (or safe fallback if Ollama unavailable).
+- AI Chatbot responds without errors.
+- Health endpoint works: `/_stcore/health`.
 
 ## Cloud Deployment
 

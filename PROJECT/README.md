@@ -428,6 +428,24 @@ python ml/enhanced_models.py
 
 ## 🚀 Deployment Options
 
+### ✅ Recommended (smoothest): Render + Docker
+
+This is the most reliable and fastest way to get a public URL for interviews.
+
+1. Push this repo to GitHub.
+2. Create a new **Web Service** on Render from your repo.
+3. Render auto-builds from `Dockerfile`.
+4. Set environment variables in Render:
+   - `NOAA_API_TOKEN`
+   - `OPENWEATHER_API_KEY`
+   - `PORT` (auto provided by Render)
+   - Optional: `OLLAMA_URL` (if using external hosted Ollama)
+5. Deploy and open the public URL.
+
+Notes:
+- Dockerfile already supports dynamic cloud port via `PORT`.
+- If Ollama is not hosted in cloud, app still runs with safe AI fallback behavior.
+
 ### Local Development
 ```bash
 streamlit run climacast_app.py

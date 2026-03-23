@@ -13,7 +13,7 @@ class ClimateAIAdvisor:
     application can render stakeholder-specific recommendations (farmers, policymakers, etc.).
     """
 
-    def __init__(self, ollama_url: str = "http://localhost:11434", model: str = "llama3.2:3b"):
+    def __init__(self, ollama_url: str = "http://localhost:11434", model: str = "qwen:0.5b"):
         self.ollama_url = ollama_url.rstrip("/")
         self.model = model
         self._base_url = None  # To cache the detected working base URL
@@ -84,6 +84,13 @@ class ClimateAIAdvisor:
                 continue  # Try the next URL
 
         return self.ollama_url # Fallback to the original URL
+
+    def _is_generic_insight(self, text: str) -> bool:
+        if not text:
+            return True
+        t = text.strip().lower()
+        generic_markers = ["how may i assist", "how can i help", "hello", "hi there"]
+        return any(m in t for m in generic_markers)
 
     def _try_endpoints(self, payload: Dict[str, Any], timeout: int = 30) -> Dict[str, Any]:
         endpoints = [
@@ -208,7 +215,7 @@ class ClimateAIAdvisor:
                 location = forecast_data.get("location", "the region")
                 
                 # If we have insights from Ollama, use them; otherwise generate fallback
-                if ai_insights and ai_insights.strip() and len(ai_insights.strip()) > 20:
+                if ai_insights and ai_insights.strip() and len(ai_insights.strip()) > 20 and not self._is_generic_insight(ai_insights):
                     # Ollama provided insights - use them
                     pass
                 else:
@@ -384,12 +391,43 @@ class ClimateAIAdvisor:
                 f"can reach a compatible endpoint. Last error: {str(last_err)}"
             )
         
+        # Demo-safe fallback: return usable insights even when local AI service is unavailable.
+        vars_present = forecast_data.get("variables", []) if isinstance(forecast_data, dict) else []
+        means = forecast_data.get("mean", {}) if isinstance(forecast_data, dict) else {}
+        trends = forecast_data.get("trend", {}) if isinstance(forecast_data, dict) else {}
+        location = forecast_data.get("location", "the selected region") if isinstance(forecast_data, dict) else "the selected region"
+
+        summary_lines = [f"AI server is unavailable right now, so this is a built-in fallback analysis for {location}."]
+        for v in vars_present:
+            mv = means.get(v, "N/A")
+            tr = trends.get(v, "stable")
+            try:
+                mv = f"{float(mv):.2f}"
+            except Exception:
+                mv = str(mv)
+            summary_lines.append(f"- {v.title()}: mean={mv}, trend={tr}")
+
+        fallback_recs = {
+            "farmers": [
+                "Track short-term weather updates and adjust irrigation/planting windows.",
+                "Use climate-resilient seeds and maintain contingency plans for heat/rain anomalies."
+            ],
+            "policymakers": [
+                "Use early-warning communication for heat/flood events.",
+                "Prioritize water-resource planning and local adaptation measures."
+            ],
+            "public_health": [
+                "Issue advisories during temperature extremes and poor air-quality periods.",
+                "Prepare primary care units for seasonal climate-related health surges."
+            ]
+        }
+
         return {
-            "success": False,
+            "success": True,
             "error": friendly,
-            "ai_insights": "Unable to generate insights due to an error.",
-            "graph_explanation": "",
-            "audience_recommendations": {},
+            "ai_insights": "\n".join(summary_lines),
+            "graph_explanation": "Generated via local fallback mode (Ollama unavailable).",
+            "audience_recommendations": fallback_recs,
         }
 
     def analyze_extreme_events(self, forecast_data: pd.DataFrame, thresholds: Dict[str, float]) -> List[Dict[str, Any]]:

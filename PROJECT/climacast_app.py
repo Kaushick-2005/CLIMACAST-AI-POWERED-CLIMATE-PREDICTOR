@@ -1289,9 +1289,14 @@ with tab4:
     st.header("💬 AI Climate Chatbot")
     st.markdown("Ask questions about specific dates and get personalized climate recommendations!")
     
-    # Initialize chatbot if not exists
-    if 'chatbot' not in st.session_state:
-        st.session_state.chatbot = ClimateAIChatbot(model="llama3.2:3b")
+    # Initialize chatbot if not exists (or force refresh when logic version changes)
+    chatbot_logic_version = "v2_climacast_grounded"
+    if (
+        'chatbot' not in st.session_state
+        or st.session_state.get('chatbot_logic_version') != chatbot_logic_version
+    ):
+        st.session_state.chatbot = ClimateAIChatbot(model="qwen:0.5b")
+        st.session_state.chatbot_logic_version = chatbot_logic_version
     
     # Date selection and region
     col1, col2 = st.columns([1, 1])
