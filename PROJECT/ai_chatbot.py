@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import re
+import os
 
 class ClimateAIChatbot:
     """AI Chatbot for climate forecasting and recommendations using Llama 3.2:3b model."""
@@ -14,6 +15,37 @@ class ClimateAIChatbot:
         self.model = model
         self._base_url = None
         self.conversation_history = []
+        # Optional cloud LLM provider (OpenRouter-compatible)
+        self.cloud_api_key = os.getenv("OPENROUTER_API_KEY")
+        self.cloud_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        self.cloud_model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+
+    def _try_cloud_chat(self, prompt: str) -> Optional[str]:
+        """Try cloud chat completions first when API key is configured."""
+        if not self.cloud_api_key:
+            return None
+
+        url = f"{self.cloud_base_url.rstrip('/')}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.cloud_api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.cloud_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+        }
+
+        resp = requests.post(url, json=payload, headers=headers, timeout=45)
+        resp.raise_for_status()
+        data = resp.json()
+        choices = data.get("choices", []) if isinstance(data, dict) else []
+        if choices:
+            msg = choices[0].get("message", {}) if isinstance(choices[0], dict) else {}
+            content = msg.get("content")
+            if content:
+                return str(content)
+        return None
 
     def _build_generation_prompt(self, user_question: str, forecast_data: Dict[str, Any], selected_date: str, region: str) -> str:
         """Single grounded prompt: generate free-form answer, but only for weather/climate topics."""
@@ -268,6 +300,26 @@ Respond naturally as if you're having a conversation with the user."""
         """Get AI response for user question."""
         
         prompt = self._build_generation_prompt(user_question, forecast_data, selected_date, region)
+
+        # 1) Prefer cloud provider in production (Render-safe)
+        try:
+            cloud_text = self._try_cloud_chat(prompt)
+            if cloud_text and len(cloud_text.strip()) > 10 and not self._is_generic_response(cloud_text):
+                self.conversation_history.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "user_question": user_question,
+                    "selected_date": selected_date,
+                    "ai_response": cloud_text.strip(),
+                    "region": region
+                })
+                return {
+                    "success": True,
+                    "response": cloud_text.strip(),
+                    "timestamp": datetime.now().isoformat()
+                }
+        except Exception:
+            # Fall back to local Ollama path
+            pass
         
         payload_variants = [
             {"model": self.model, "prompt": prompt, "stream": False},
