@@ -1012,7 +1012,8 @@ with tab1:
         # Export options
         col1, col2 = st.columns([1, 4])
         with col1:
-            export_format = st.selectbox("Export Format", ["png", "jpg", "pdf", "html"], key=f"forecast_export_{variable}")
+            # Use HTML export in cloud environments to avoid Kaleido/Chrome runtime dependency
+            export_format = st.selectbox("Export Format", ["html"], key=f"forecast_export_{variable}")
         with col2:
             chart_data = get_chart_data(st.session_state.forecast_fig, export_format)
             if chart_data:
@@ -1095,7 +1096,8 @@ with tab2:
         
         col1, col2 = st.columns([1, 4])
         with col1:
-            export_format = st.selectbox("Export Format", ["png", "jpg", "pdf", "html"], key=f"analysis_export_{analysis_variable}")
+            # Use HTML export in cloud environments to avoid Kaleido/Chrome runtime dependency
+            export_format = st.selectbox("Export Format", ["html"], key=f"analysis_export_{analysis_variable}")
         with col2:
             chart_data = get_chart_data(st.session_state.analysis_fig, export_format)
             if chart_data:
