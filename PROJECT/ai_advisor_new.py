@@ -3,6 +3,7 @@ import json
 from typing import Dict, Any, List, Optional
 import pandas as pd
 import re
+import os
 
 
 class ClimateAIAdvisor:
@@ -17,6 +18,10 @@ class ClimateAIAdvisor:
         self.ollama_url = ollama_url.rstrip("/")
         self.model = model
         self._base_url = None  # To cache the detected working base URL
+        # Optional cloud LLM path (recommended for Render)
+        self.cloud_api_key = os.getenv("OPENROUTER_API_KEY")
+        self.cloud_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        self.cloud_model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 
     def _generate_prompt(self, forecast_data: Dict[str, Any], historical_context: Dict[str, Any],
                          audiences: Optional[List[str]] = None) -> str:
@@ -138,9 +143,63 @@ class ClimateAIAdvisor:
 
         raise last_exc if last_exc is not None else Exception("No compatible endpoint responded")
 
+    def _try_cloud_chat(self, prompt: str, timeout: int = 30) -> Optional[str]:
+        """Try cloud chat completions (OpenRouter-compatible) when API key is present."""
+        if not self.cloud_api_key:
+            return None
+
+        url = f"{self.cloud_base_url.rstrip('/')}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.cloud_api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.cloud_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+        }
+
+        resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        choices = data.get("choices", []) if isinstance(data, dict) else []
+        if choices:
+            msg = choices[0].get("message", {}) if isinstance(choices[0], dict) else {}
+            content = msg.get("content")
+            if content:
+                return str(content)
+        return None
+
     def get_insights(self, forecast_data: Dict[str, Any], historical_context: Dict[str, Any],
                      audiences: Optional[List[str]] = None, timeout: int = 30) -> Dict[str, Any]:
         prompt = self._generate_prompt(forecast_data, historical_context, audiences=audiences)
+
+        # 1) Prefer cloud provider in production when configured
+        try:
+            cloud_text = self._try_cloud_chat(prompt, timeout=timeout)
+            if cloud_text and cloud_text.strip() and not self._is_generic_insight(cloud_text):
+                return {
+                    "success": True,
+                    "ai_insights": cloud_text.strip(),
+                    "audience_recommendations": {
+                        "farmers": [
+                            "Use forecast-driven irrigation and planting windows.",
+                            "Prioritize resilient crop and soil moisture management practices."
+                        ],
+                        "policymakers": [
+                            "Strengthen local heat/flood preparedness and climate communication.",
+                            "Use forecast trends for water and resilience planning."
+                        ],
+                        "public_health": [
+                            "Issue advisories during risk periods and monitor vulnerable groups.",
+                            "Prepare local care systems for climate-linked health surges."
+                        ]
+                    },
+                    "raw": cloud_text,
+                }
+        except Exception:
+            # Fall through to local Ollama path and then built-in fallback
+            pass
 
         payload_variants = [
             # Ollama native generate (plain text only)
