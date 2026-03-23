@@ -1,35 +1,9 @@
-﻿streamlit
+streamlit
 plotly
 pandas
 numpy
 requests
-fastapi
-uvicorn
-pydantic
-python-multipart
-sqlalchemy
-# sqlite3 is part of the Python standard library; do not install via pip
-# prophet removed from default cloud deploy to avoid heavy build/runtime failures on Render
-# install manually only if you need API/model training that imports Prophet
-# prophet
-statsmodels
-scikit-learn
-matplotlib
-seaborn
 python-dateutil
 pytz
-tqdm
-joblib
-openpyxl
-xlrd
-Pillow
-reportlab
-# weasyprint removed from default cloud deploy (requires extra OS libs not present on Render by default)
-# install manually only if PDF/CSS rendering via weasyprint is needed
-# weasyprint
-jinja2
-click
-typer
-rich
 python-dotenv
 kaleido
